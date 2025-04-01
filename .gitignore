@@ -1,11 +1,38 @@
-# Folders
-workbench
-__pycache__
-venv
-.langgraph_api
+# Python specific
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
 
-# Files
+# Virtual environments
+venv/
+env/
+ENV/
+
+# Environment variables
 .env
-.env.temp
-.env.test
-env_vars.json
+
+# Project specific
+workbench/
+.idea/
+.vscode/
+
+# OS specific
+.DS_Store
+Thumbs.db

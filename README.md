@@ -1,315 +1,157 @@
-# Archon - AI Agent Builder
+# Archon V2 - Agentic Workflow for Building Pydantic AI Agents
 
-<img src="public/Archon.png" alt="Archon Logo" />
+This is the second iteration of the Archon project, building upon V1 by introducing LangGraph for a full agentic workflow. The system starts with a reasoning LLM (like O3-mini or R1) that analyzes user requirements and documentation to create a detailed scope, which then guides specialized coding and routing agents in generating high-quality Pydantic AI agents.
 
-<div align="center" style="margin-top: 20px;margin-bottom: 30px">
+An intelligent documentation crawler and RAG (Retrieval-Augmented Generation) system built using Pydantic AI, LangGraph, and Supabase that is capable of building other Pydantic AI agents. The system crawls the Pydantic AI documentation, stores content in a vector database, and provides Pydantic AI agent code by retrieving and analyzing relevant documentation chunks.
 
-<h3>🚀 **CURRENT VERSION** 🚀</h3>
+This version also supports local LLMs with Ollama for the main agent and reasoning LLM.
 
-**[ V5 - Multi-Agent Coding Workflow ]**
-*Specialized agents for different parts of the agent creation process*
+Note that we are still relying on OpenAI for embeddings no matter what, but future versions of Archon will change that.
 
-</div>
+## Project Structure
 
-> **🔄 IMPORTANT UPDATE (March 20th)**: Archon now uses a multi-agent workflow with specialized refiner agents for autonomous prompt, tools, and agent definition improvements. The primary coding agent still creates the initial
-agent by itself, but then you can say 'refine' or something along those lines as a follow up prompt to kick
-off the specialized agents in parallel.
+The project is organized in a modular way to enable easy creation of multiple agents:
 
-Archon is the world's first **"Agenteer"**, an AI agent designed to autonomously build, refine, and optimize other AI agents. 
+```
+project/
+├── agents/               # All agent implementations
+│   ├── archon/           # Original Archon agent
+│   │   ├── __init__.py
+│   │   ├── agent.py      # Archon agent implementation
+│   │   └── prompts.py    # System prompts for Archon
+│   └── your_new_agent/   # Add your own agents here
+├── core/                 # Core functionality
+│   ├── agent_base.py     # Agent creation utilities
+│   ├── graph.py          # LangGraph workflow utilities
+│   ├── models.py         # LLM model utilities
+│   └── state.py          # Agent state management
+├── utils/                # Utility functions
+│   ├── chunking.py       # Text chunking utilities
+│   ├── crawl.py          # Document crawling utilities
+│   ├── db.py             # Database operations
+│   └── embeddings.py     # Vector embedding utilities
+├── ui/                   # User interfaces
+│   └── streamlit_app.py  # Streamlit UI components
+├── config/               # Configuration
+│   └── settings.py       # Settings manager
+├── scripts/              # Utility scripts
+│   ├── crawler.py        # Documentation crawler script
+│   └── setup_db.py       # Database setup script
+├── db/                   # Database scripts
+│   ├── site_pages.sql    # SQL for setting up the database
+│   └── ollama_site_pages.sql  # Ollama-specific SQL
+├── main.py               # Main entry point
+├── requirements.txt      # Project dependencies
+└── .env.example          # Example environment variables
+```
 
-It serves both as a practical tool for developers and as an educational framework demonstrating the evolution of agentic systems.
-Archon will be developed in iterations, starting with just a simple Pydantic AI agent that can build other Pydantic AI agents,
-all the way to a full agentic workflow using LangGraph that can build other AI agents with any framework.
-Through its iterative development, Archon showcases the power of planning, feedback loops, and domain-specific knowledge in creating robust AI agents.
+## Features
 
-## Important Links
+- Multi-agent workflow using LangGraph
+- Specialized agents for reasoning, routing, and coding
+- Pydantic AI documentation crawling and chunking
+- Vector database storage with Supabase
+- Semantic search using OpenAI embeddings
+- RAG-based question answering
+- Support for code block preservation
+- Streamlit UI for interactive querying
 
-- The current version of Archon is V5 as mentioned above - see [V5 Documentation](iterations/v5-parallel-specialized-agents/README.md) for details.
+## Prerequisites
 
-- I **just** created the [Archon community](https://thinktank.ottomator.ai/c/archon/30) forum over in the oTTomator Think Tank! Please post any questions you have there!
-
-- [GitHub Kanban board](https://github.com/users/coleam00/projects/1) for feature implementation and bug squashing.
-
-## Vision
-
-Archon demonstrates three key principles in modern AI development:
-
-1. **Agentic Reasoning**: Planning, iterative feedback, and self-evaluation overcome the limitations of purely reactive systems
-2. **Domain Knowledge Integration**: Seamless embedding of frameworks like Pydantic AI and LangGraph within autonomous workflows
-3. **Scalable Architecture**: Modular design supporting maintainability, cost optimization, and ethical AI practices
-
-## Getting Started with V5 (current version)
-
-Since V5 is the current version of Archon, all the code for V5 is in both the main directory and `archon/iterations/v5-parallel-specialized-agents` directory.
-
-### Prerequisites
-- Docker (optional but preferred)
 - Python 3.11+
-- Supabase account (for vector database)
-- OpenAI/Anthropic/OpenRouter API key or Ollama for local LLMs (note that only OpenAI supports streaming in the Streamlit UI currently)
+- Supabase account and database
+- OpenAI/OpenRouter API key or Ollama for local LLMs
+- Streamlit (for web interface)
 
-### Installation
+## Installation
 
-#### Option 1: Docker (Recommended)
 1. Clone the repository:
 ```bash
 git clone https://github.com/coleam00/archon.git
 cd archon
 ```
 
-2. Run the Docker setup script:
-```bash
-# This will build both containers and start Archon
-python run_docker.py
-```
-
-3. Access the Streamlit UI at http://localhost:8501.
-
-> **Note:** `run_docker.py` will automatically:
-> - Build the MCP server container
-> - Build the main Archon container
-> - Run Archon with the appropriate port mappings
-> - Use environment variables from `.env` file if it exists
-
-#### Option 2: Local Python Installation
-1. Clone the repository:
-```bash
-git clone https://github.com/coleam00/archon.git
-cd archon
-```
-
-2. Install dependencies:
+2. Install dependencies (recommended to use a Python virtual environment):
 ```bash
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-3. Start the Streamlit UI:
-```bash
-streamlit run streamlit_ui.py
-```
+3. Set up environment variables:
+   - Rename `.env.example` to `.env`
+   - Edit `.env` with your API keys and preferences:
+   ```env
+   BASE_URL=https://api.openai.com/v1 for OpenAI, https://api.openrouter.ai/v1 for OpenRouter, or your Ollama URL
+   LLM_API_KEY=your_openai_or_openrouter_api_key
+   OPENAI_API_KEY=your_openai_api_key
+   SUPABASE_URL=your_supabase_url
+   SUPABASE_SERVICE_KEY=your_supabase_service_key
+   PRIMARY_MODEL=gpt-4o-mini  # or your preferred OpenAI model for main agent
+   REASONER_MODEL=o3-mini     # or your preferred OpenAI model for reasoning
+   ```
 
-4. Access the Streamlit UI at http://localhost:8501.
+## Usage
 
-### Setup Process
+### Database Setup
 
-After installation, follow the guided setup process in the Intro section of the Streamlit UI:
-- **Environment**: Configure your API keys and model settings - all stored in `workbench/env_vars.json`
-- **Database**: Set up your Supabase vector database
-- **Documentation**: Crawl and index the Pydantic AI documentation
-- **Agent Service**: Start the agent service for generating agents
-- **Chat**: Interact with Archon to create AI agents
-- **MCP** (optional): Configure integration with AI IDEs
-
-The Streamlit interface will guide you through each step with clear instructions and interactive elements.
-There are a good amount of steps for the setup but it goes quick!
-
-### Troubleshooting
-
-If you encounter any errors when using Archon, please first check the logs in the "Agent Service" tab.
-Logs specifically for MCP are also logged to `workbench/logs.txt` (file is automatically created) so please
-check there. The goal is for you to have a clear error message before creating a bug here in the GitHub repo
-
-### Updating Archon
-
-#### Option 1: Docker
-To get the latest updates for Archon when using Docker:
+Use the setup script to create the necessary tables:
 
 ```bash
-# Pull the latest changes from the repository (from within the archon directory)
-git pull
-
-# Rebuild and restart the containers with the latest changes
-python run_docker.py
+python scripts/setup_db.py
 ```
 
-The `run_docker.py` script will automatically:
-- Detect and remove any existing Archon containers (whether running or stopped)
-- Rebuild the containers with the latest code
-- Start fresh containers with the updated version
-
-#### Option 2: Local Python Installation
-To get the latest updates for Archon when using local Python installation:
+For Ollama-specific setup:
 
 ```bash
-# Pull the latest changes from the repository (from within the archon directory)
-git pull
-
-# Install any new dependencies
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-pip install -r requirements.txt
-
-# Restart the Streamlit UI
-# (If you're already running it, stop with Ctrl+C first)
-streamlit run streamlit_ui.py
+python scripts/setup_db.py --ollama
 ```
 
-This ensures you're always running the most recent version of Archon with all the latest features and bug fixes.
+### Crawl Documentation
 
-## Project Evolution
+To crawl and store documentation in the vector database:
 
-### V1: Single-Agent Foundation
-- Basic RAG-powered agent using Pydantic AI
-- Supabase vector database for documentation storage
-- Simple code generation without validation
-- [Learn more about V1](iterations/v1-single-agent/README.md)
-
-### V2: Agentic Workflow (LangGraph)
-- Multi-agent system with planning and execution separation
-- Reasoning LLM (O3-mini/R1) for architecture planning
-- LangGraph for workflow orchestration
-- Support for local LLMs via Ollama
-- [Learn more about V2](iterations/v2-agentic-workflow/README.md)
-
-### V3: MCP Support
-- Integration with AI IDEs like Windsurf and Cursor
-- Automated file creation and dependency management
-- FastAPI service for agent generation
-- Improved project structure and organization
-- [Learn more about V3](iterations/v3-mcp-support/README.md)
-
-### V4: Streamlit UI Overhaul
-- Docker support
-- Comprehensive Streamlit interface for managing all aspects of Archon
-- Guided setup process with interactive tabs
-- Environment variable management through the UI
-- Database setup and documentation crawling simplified
-- Agent service control and monitoring
-- MCP configuration through the UI
-- [Learn more about V4](iterations/v4-streamlit-ui-overhaul/README.md)
-
-### V5: Current - Multi-Agent Coding Workflow
-- Specialized refiner agents for different autonomously improving the initially generated agent
-- Prompt refiner agent for optimizing system prompts
-- Tools refiner agent for specialized tool implementation
-- Agent refiner for optimizing agent configuration and dependencies
-- Cohesive initial agent structure before specialized refinement
-- Improved workflow orchestration with LangGraph
-- [Learn more about V5](iterations/v5-parallel-specialized-agents/README.md)
-
-### Future Iterations
-- V6: Tool Library and Example Integration - Pre-built external tool and agent examples incorporation
-- V7: LangGraph Documentation - Allow Archon to build Pydantic AI AND LangGraph agents
-- V8: Self-Feedback Loop - Automated validation and error correction
-- V9: Self Agent Execution - Testing and iterating on agents in an isolated environment
-- V10: Multi-Framework Support - Framework-agnostic agent generation
-- V11: Autonomous Framework Learning - Self-updating framework adapters
-- V12: Advanced RAG Techniques - Enhanced retrieval and incorporation of framework documentation
-- V13: MCP Agent Marketplace - Integrating Archon agents as MCP servers and publishing to marketplaces
-
-### Future Integrations
-- LangSmith
-- MCP marketplace
-- Other frameworks besides Pydantic AI
-- Other vector databases besides Supabase
-- [Local AI package](https://github.com/coleam00/local-ai-packaged) for the agent environment
-
-## Archon Agents Architecture
-
-The below diagram from the LangGraph studio is a visual representation of the Archon agent graph.
-
-<img src="public/ArchonGraph.png" alt="Archon Graph" />
-
-The flow works like this:
-
-1. You describe the initial AI agent you want to create
-2. The reasoner LLM creates the high level scope for the agent
-3. The primary coding agent uses the scope and documentation to create the initial agent
-4. Control is passed back to you to either give feedback or ask Archon to 'refine' the agent autonomously
-5. If refining autonomously, the specialized agents are invoked to improve the prompt, tools, and agent configuration
-6. The primary coding agent is invoked again with either user or specialized agent feedback
-7. The process goes back to step 4 until you say the agent is complete
-8. Once the agent is complete, Archon spits out the full code again with instructions for running it
-
-## File Architecture
-
-### Core Files
-- `streamlit_ui.py`: Comprehensive web interface for managing all aspects of Archon
-- `graph_service.py`: FastAPI service that handles the agentic workflow
-- `run_docker.py`: Script to build and run Archon Docker containers
-- `Dockerfile`: Container definition for the main Archon application
-
-### MCP Integration
-- `mcp/`: Model Context Protocol server implementation
-  - `mcp_server.py`: MCP server script for AI IDE integration
-  - `Dockerfile`: Container definition for the MCP server
-
-### Archon Package
-- `archon/`: Core agent and workflow implementation
-  - `archon_graph.py`: LangGraph workflow definition and agent coordination
-  - `pydantic_ai_coder.py`: Main coding agent with RAG capabilities
-  - `refiner_agents/`: Specialized agents for refining different aspects of the created agent
-    - `prompt_refiner_agent.py`: Optimizes system prompts
-    - `tools_refiner_agent.py`: Specializes in tool implementation
-    - `agent_refiner_agent.py`: Refines agent configuration and dependencies
-  - `crawl_pydantic_ai_docs.py`: Documentation crawler and processor
-
-### Utilities
-- `utils/`: Utility functions and database setup
-  - `utils.py`: Shared utility functions
-  - `site_pages.sql`: Database setup commands
-
-### Workbench
-- `workbench/`: Created at runtime, files specific to your environment
-  - `env_vars.json`: Environment variables defined in the UI are stored here (included in .gitignore, file is created automatically)
-  - `logs.txt`: Low level logs for all Archon processes go here
-  - `scope.md`: The detailed scope document created by the reasoner model at the start of each Archon execution
-
-## Deployment Options
-- **Docker Containers**: Run Archon in isolated containers with all dependencies included
-  - Main container: Runs the Streamlit UI and graph service
-  - MCP container: Provides MCP server functionality for AI IDEs
-- **Local Python**: Run directly on your system with a Python virtual environment
-
-### Docker Architecture
-The Docker implementation consists of two containers:
-1. **Main Archon Container**:
-   - Runs the Streamlit UI on port 8501
-   - Hosts the Graph Service on port 8100
-   - Built from the root Dockerfile
-   - Handles all agent functionality and user interactions
-
-2. **MCP Container**:
-   - Implements the Model Context Protocol for AI IDE integration
-   - Built from the mcp/Dockerfile
-   - Communicates with the main container's Graph Service
-   - Provides a standardized interface for AI IDEs like Windsurf, Cursor, Cline, and Roo Code
-
-When running with Docker, the `run_docker.py` script automates building and starting both containers with the proper configuration.
-
-## Database Setup
-
-The Supabase database uses the following schema:
-
-```sql
-CREATE TABLE site_pages (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    url TEXT,
-    chunk_number INTEGER,
-    title TEXT,
-    summary TEXT,
-    content TEXT,
-    metadata JSONB,
-    embedding VECTOR(1536) -- Adjust dimensions as necessary (i.e. 768 for nomic-embed-text)
-);
+```bash
+python scripts/crawler.py
 ```
 
-The Streamlit UI provides an interface to set up this database structure automatically.
+This will:
+1. Fetch URLs from the documentation sitemap
+2. Crawl each page and split into chunks
+3. Generate embeddings and store in Supabase
+
+### Running the Agent
+
+Launch the Streamlit web interface:
+
+```bash
+streamlit run main.py
+```
+
+The interface will be available at `http://localhost:8501`
+
+## Creating Your Own Agent
+
+To create a new agent:
+
+1. Create a new directory in the `agents` folder:
+```bash
+mkdir -p agents/your_agent_name
+```
+
+2. Create the necessary files:
+```
+agents/your_agent_name/
+├── __init__.py
+├── agent.py      # Your agent implementation
+└── prompts.py    # System prompts for your agent
+```
+
+3. Implement your agent using the core components
+4. Create a custom main file or add your agent to the existing one
+
+See the `agents/archon` directory for an example implementation.
 
 ## Contributing
 
-We welcome contributions! Whether you're fixing bugs, adding features, or improving documentation, please feel free to submit a Pull Request.
-
-## License
-
-[MIT License](LICENSE)
-
----
-
-For version-specific details:
-- [V1 Documentation](iterations/v1-single-agent/README.md)
-- [V2 Documentation](iterations/v2-agentic-workflow/README.md)
-- [V3 Documentation](iterations/v3-mcp-support/README.md)
-- [V4 Documentation](iterations/v4-streamlit-ui-overhaul/README.md)
-- [V5 Documentation](iterations/v5-parallel-specialized-agents/README.md)
+Contributions are welcome! Please feel free to submit a Pull Request.
