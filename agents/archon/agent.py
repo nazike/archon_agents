@@ -4,7 +4,7 @@ Archon Agent - An agentic workflow for building Pydantic AI agents
 from pydantic_ai import Agent, RunContext
 from typing import TypedDict, List, Annotated, Dict, Any, Optional
 from dataclasses import dataclass
-from openai import AsyncOpenAI, AzureOpenAI
+from openai import AsyncOpenAI, AsyncAzureOpenAI
 from supabase import Client
 import os
 import asyncio
@@ -35,6 +35,9 @@ from pydantic_ai.messages import (
     ModelMessagesTypeAdapter
 )
 
+# Import from models
+from core.models import get_azure_openai_model
+
 # Get settings
 settings = get_settings()
 
@@ -42,8 +45,8 @@ settings = get_settings()
 class PydanticAIDeps:
     """Dependencies for the Pydantic AI coder agent"""
     supabase: Client
-    openai_client: AsyncOpenAI
     reasoner_output: str
+    openai_client: Optional[AsyncOpenAI] = None
 
 class ArchonState(ReasoningAgentState):
     """State for the Archon agent workflow"""
@@ -53,33 +56,35 @@ class ArchonState(ReasoningAgentState):
 # Create the agents
 def create_reasoner_agent():
     """Create the reasoning agent"""
-    return create_agent(
-        settings.REASONER_MODEL,
-        system_prompt=REASONER_SYSTEM_PROMPT,
-        api_key=settings.AZURE_OPENAI_API_KEY,
-        deps_type=None,
-        retries=2
+    # Use the Azure-specific model creation function
+    # Pass the specific deployment name 'o3-mini'
+    model = get_azure_openai_model(
+        deployment_name="o3-mini", # Specific deployment name
+        api_key=settings.AZURE_OPENAI_API_KEY # Explicitly pass API key for clarity/override
     )
+    agent = Agent(model, system_prompt=REASONER_SYSTEM_PROMPT, retries=2)
+    return agent
 
 def create_router_agent():
     """Create the router agent"""
-    return create_agent(
-        settings.PRIMARY_MODEL,
-        system_prompt=ROUTER_SYSTEM_PROMPT,
-        api_key=settings.AZURE_OPENAI_API_KEY,
-        deps_type=None,
-        retries=2
+    # Use the Azure-specific model creation function
+    # Pass the specific deployment name 'o3-mini'
+    model = get_azure_openai_model(
+        deployment_name="o3-mini", # Specific deployment name
+        api_key=settings.AZURE_OPENAI_API_KEY
     )
+    agent = Agent(model, system_prompt=ROUTER_SYSTEM_PROMPT, retries=2)
+    return agent
 
 def create_coder_agent():
     """Create the coder agent"""
-    agent = create_agent(
-        settings.PRIMARY_MODEL,
-        system_prompt=CODER_SYSTEM_PROMPT,
-        api_key=settings.AZURE_OPENAI_API_KEY,
-        deps_type=PydanticAIDeps,
-        retries=2
+    # Use the Azure-specific model creation function
+    # Pass the specific deployment name 'o3-mini'
+    model = get_azure_openai_model(
+        deployment_name="o3-mini", # Specific deployment name
+        api_key=settings.AZURE_OPENAI_API_KEY
     )
+    agent = Agent(model, system_prompt=CODER_SYSTEM_PROMPT, deps_type=PydanticAIDeps, retries=2)
     
     @agent.system_prompt  
     def add_reasoner_output(ctx: RunContext[PydanticAIDeps]) -> str:
@@ -104,7 +109,7 @@ def create_coder_agent():
         """
         try:
             # Get the embedding for the query
-            query_embedding = await get_embedding(user_query, ctx.deps.openai_client)
+            query_embedding = await get_embedding(user_query)
             
             # Query Supabase for relevant documents
             result = ctx.deps.supabase.rpc(
@@ -203,12 +208,14 @@ def create_coder_agent():
 
 def create_end_conversation_agent():
     """Create the end conversation agent"""
-    return create_agent(
-        settings.PRIMARY_MODEL,
-        system_prompt=END_CONVERSATION_SYSTEM_PROMPT,
-        base_url=settings.BASE_URL,
-        api_key=settings.LLM_API_KEY
+    # Use the Azure-specific model creation function
+    # Pass the specific deployment name 'o3-mini'
+    model = get_azure_openai_model(
+        deployment_name="o3-mini", # Specific deployment name
+        api_key=settings.AZURE_OPENAI_API_KEY
     )
+    agent = Agent(model, system_prompt=END_CONVERSATION_SYSTEM_PROMPT, retries=2)
+    return agent
 
 # Node implementations
 async def define_scope_with_reasoner(state: ArchonState):
@@ -291,10 +298,9 @@ async def coder_agent_node(state: ArchonState, writer):
     """
     # Initialize clients
     supabase = create_supabase_client()
-    openai_client = AsyncOpenAI(
-        api_key=settings.OPENAI_API_KEY,
-        base_url=settings.BASE_URL
-    )
+    
+    # Use None for openai_client, as we're directly configuring Azure in get_embedding
+    openai_client = None
     
     # Prepare dependencies
     deps = PydanticAIDeps(

@@ -8,7 +8,15 @@ from typing import Any, Callable, AsyncGenerator
 from config.settings import get_settings
 
 # For type hints only
-from langgraph.graph import CompiledGraph
+from langgraph.graph import StateGraph
+from typing import TypeVar, Generic, Dict, Any
+
+# Type for graph
+T = TypeVar('T')
+class CompilableGraph(Generic[T]):
+    """Type hint for a compiled graph that can be used with astream"""
+    async def astream(self, *args, **kwargs) -> AsyncGenerator[str, None]:
+        ...
 
 # Set page configuration
 st.set_page_config(
@@ -29,7 +37,7 @@ def get_thread_id() -> str:
 thread_id = get_thread_id()
 
 async def stream_agent_response(
-    agent_graph: CompiledGraph,
+    agent_graph: CompilableGraph,
     user_input: str,
     first_message: bool = False
 ) -> AsyncGenerator[str, None]:
@@ -70,7 +78,7 @@ async def stream_agent_response(
 
 def create_agent_ui(
     title: str,
-    agent_graph: CompiledGraph,
+    agent_graph: CompilableGraph,
     description: str = "",
     example_prompts: list[str] = None
 ):
@@ -123,7 +131,7 @@ def add_user_message(message: str):
     with st.chat_message("user"):
         st.markdown(message)
 
-def run_agent(agent_graph: CompiledGraph, user_input: str):
+def run_agent(agent_graph: CompilableGraph, user_input: str):
     """Run the agent with the user input"""
     first_message = len(st.session_state.messages) <= 1
     

@@ -1,4 +1,4 @@
-from openai import AsyncOpenAI, AzureOpenAI
+from openai import AsyncOpenAI, AsyncAzureOpenAI
 from typing import List, Dict, Any, Optional
 from supabase import Client
 import os
@@ -22,15 +22,18 @@ async def get_azure_embedding(
         Embedding vector
     """
     try:
-        # Create Azure OpenAI client
-        client = AzureOpenAI(
+        # Get the actual deployment name for embeddings
+        deployment = model or settings.AZURE_OPENAI_EMBEDDING_DEPLOYMENT
+        
+        # Create Azure OpenAI client with proper configuration
+        client = AsyncAzureOpenAI(
             api_key=settings.AZURE_OPENAI_API_KEY,
-            api_version=settings.AZURE_OPENAI_EMBEDDING_API_VERSION,
-            azure_endpoint=settings.AZURE_OPENAI_EMBEDDING_ENDPOINT
+            api_version=settings.AZURE_OPENAI_API_VERSION,
+            azure_endpoint=settings.AZURE_OPENAI_ENDPOINT
         )
         
-        response = client.embeddings.create(
-            model=model or settings.AZURE_OPENAI_EMBEDDING_DEPLOYMENT,
+        response = await client.embeddings.create(
+            model=deployment,
             input=text
         )
         return response.data[0].embedding
@@ -40,38 +43,22 @@ async def get_azure_embedding(
 
 async def get_embedding(
     text: str, 
-    openai_client: AsyncOpenAI = None,
+    openai_client: AsyncOpenAI = None,  # Keeping for backward compatibility
     model: str = None
 ) -> List[float]:
     """
-    Get embedding vector from OpenAI or Azure OpenAI.
+    Get embedding vector from Azure OpenAI.
     
     Args:
         text: Text to get embedding for
-        openai_client: Optional OpenAI client
+        openai_client: Optional OpenAI client (not used, kept for compatibility)
         model: Optional embedding model to use
     
     Returns:
         Embedding vector
     """
-    # Try to use Azure OpenAI first if credentials are available
-    if settings.AZURE_OPENAI_API_KEY and settings.AZURE_OPENAI_EMBEDDING_ENDPOINT:
-        return await get_azure_embedding(text, model)
-    
-    # Fall back to standard OpenAI
-    try:
-        # If no client is provided, create one
-        if openai_client is None:
-            openai_client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
-        
-        response = await openai_client.embeddings.create(
-            model=model or "text-embedding-3-small",
-            input=text
-        )
-        return response.data[0].embedding
-    except Exception as e:
-        print(f"Error getting embedding: {e}")
-        return [0] * 1536  # Return zero vector on error
+    # We now use Azure exclusively for embeddings
+    return await get_azure_embedding(text, model)
 
 async def vector_search(
     supabase: Client,
@@ -116,7 +103,7 @@ async def vector_search(
 
 async def retrieve_relevant_documents(
     supabase: Client,
-    openai_client: AsyncOpenAI = None,
+    openai_client: AsyncOpenAI = None,  # Keeping for backward compatibility
     query: str = "",
     match_count: int = 5,
     filter_params: Optional[Dict[str, Any]] = None,
@@ -127,7 +114,7 @@ async def retrieve_relevant_documents(
     
     Args:
         supabase: Supabase client
-        openai_client: Optional OpenAI client (can be None if Azure is used)
+        openai_client: Optional OpenAI client (not used, kept for compatibility)
         query: User query
         match_count: Number of matches to return
         filter_params: Optional filter parameters
@@ -137,7 +124,7 @@ async def retrieve_relevant_documents(
         List of relevant documents
     """
     # Get embedding for query
-    query_embedding = await get_embedding(query, openai_client, model=embedding_model)
+    query_embedding = await get_embedding(query, model=embedding_model)
     
     # Search for relevant documents
     return await vector_search(

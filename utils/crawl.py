@@ -7,7 +7,7 @@ from urllib.parse import urlparse
 import os
 
 from supabase import Client
-from openai import AsyncOpenAI
+from openai import AsyncOpenAI, AsyncAzureOpenAI
 
 # Import our utilities
 from utils.chunking import chunk_with_metadata
@@ -17,7 +17,7 @@ from utils.db import batch_insert
 async def process_document(
     url: str,
     markdown: str,
-    openai_client: AsyncOpenAI,
+    openai_client: Optional[AsyncOpenAI] = None,  # Kept for backward compatibility
     embedding_model: str = "text-embedding-3-small",
     chunk_size: int = 5000,
     title: str = ""
@@ -28,7 +28,7 @@ async def process_document(
     Args:
         url: URL of the document
         markdown: Markdown content of the document
-        openai_client: OpenAI client
+        openai_client: OpenAI client (not used, kept for backward compatibility)
         embedding_model: Name of the embedding model
         chunk_size: Size of each chunk
         title: Title of the document
@@ -41,7 +41,7 @@ async def process_document(
     
     # Generate embeddings for each chunk
     for chunk in chunks:
-        embedding = await get_embedding(chunk["content"], openai_client, model=embedding_model)
+        embedding = await get_embedding(chunk["content"], model=embedding_model)
         chunk["embedding"] = embedding
         
         # Add metadata
@@ -59,7 +59,7 @@ async def process_document(
 async def get_title_and_summary(
     chunk: str,
     url: str,
-    openai_client: AsyncOpenAI,
+    openai_client: Optional[AsyncOpenAI] = None,
     model: str = "gpt-3.5-turbo"
 ) -> Dict[str, str]:
     """
@@ -68,12 +68,15 @@ async def get_title_and_summary(
     Args:
         chunk: Text chunk
         url: URL of the document
-        openai_client: OpenAI client
+        openai_client: OpenAI client (will create Azure client if None)
         model: Model to use
     
     Returns:
         Dict with title and summary
     """
+    from config.settings import get_settings
+    settings = get_settings()
+    
     system_prompt = """You are an AI that extracts titles and summaries from documentation chunks.
     Return a JSON object with 'title' and 'summary' keys.
     For the title: If this seems like the start of a document, extract its title. If it's a middle chunk, derive a descriptive title.
@@ -81,6 +84,14 @@ async def get_title_and_summary(
     Keep both title and summary concise but informative."""
     
     try:
+        # Create Azure client if not provided
+        if openai_client is None:
+            openai_client = AsyncAzureOpenAI(
+                api_key=settings.AZURE_OPENAI_API_KEY,
+                api_version=settings.AZURE_OPENAI_API_VERSION,
+                azure_endpoint=settings.AZURE_OPENAI_ENDPOINT
+            )
+        
         response = await openai_client.chat.completions.create(
             model=model,
             messages=[
@@ -124,7 +135,7 @@ def get_urls_from_sitemap(sitemap_url: str) -> List[str]:
 async def crawl_and_store(
     urls: List[str],
     supabase: Client,
-    openai_client: AsyncOpenAI,
+    openai_client: Optional[AsyncOpenAI] = None,
     table_name: str = "site_pages",
     embedding_model: str = "text-embedding-3-small",
     llm_model: str = "gpt-3.5-turbo",
@@ -137,7 +148,7 @@ async def crawl_and_store(
     Args:
         urls: List of URLs to crawl
         supabase: Supabase client
-        openai_client: OpenAI client
+        openai_client: OpenAI client (optional, will use Azure if None)
         table_name: Name of the table to store the results
         embedding_model: Name of the embedding model
         llm_model: Name of the LLM model for title and summary extraction

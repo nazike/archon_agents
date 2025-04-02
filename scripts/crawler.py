@@ -15,7 +15,7 @@ from utils.db import create_supabase_client
 from config.settings import get_settings
 
 # Import OpenAI client
-from openai import AsyncOpenAI, AzureOpenAI
+from openai import AsyncOpenAI, AsyncAzureOpenAI
 
 async def main():
     """Main entry point for the crawler"""
@@ -31,10 +31,8 @@ async def main():
     # Create clients
     supabase = create_supabase_client()
     
-    # Initialize OpenAI client (may not be used if Azure is available)
+    # We now use Azure exclusively, so this client isn't needed
     openai_client = None
-    if settings.OPENAI_API_KEY:
-        openai_client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
     
     # Get URLs to crawl
     print("Getting URLs from sitemap...")
